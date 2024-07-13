@@ -13,7 +13,6 @@ import (
 
 	"github.com/G-MAKROGLOU/containers"
 	"github.com/G-MAKROGLOU/devops/agentpool"
-	"github.com/G-MAKROGLOU/infrastructure"
 	"github.com/G-MAKROGLOU/infrastructure/azappservice"
 	"github.com/G-MAKROGLOU/infrastructure/azfunction"
 	"github.com/G-MAKROGLOU/infrastructure/azlogin"
@@ -21,17 +20,16 @@ import (
 	"github.com/G-MAKROGLOU/infrastructure/azresourcegroup"
 	"github.com/G-MAKROGLOU/infrastructure/azstorageaccount"
 	"github.com/G-MAKROGLOU/infrastructure/azwebapp"
-	"github.com/G-MAKROGLOU/migr8/utils"
 	"github.com/fatih/color"
 	prettyTable "github.com/jedib0t/go-pretty/v6/table"
 	"github.com/spf13/cobra"
 )
 
 var (
-	agentsRes    = []infrastructure.ChannelRes{}
-	infraRes     = []infrastructure.ChannelRes{}
-	pipelinesRes = []infrastructure.ChannelRes{}
-	queuesRes    = []infrastructure.ChannelRes{}
+	agentsRes    = []ChannelRes{}
+	infraRes     = []ChannelRes{}
+	pipelinesRes = []ChannelRes{}
+	queuesRes    = []ChannelRes{}
 	infraCmd     = &cobra.Command{
 		Use:               "infra",
 		Short:             "Create all the infrastructure needed by an application stack",
@@ -72,7 +70,7 @@ func init() {
 }
 
 func prerun(cmd *cobra.Command, args []string) {
-	configErr := utils.ReadJSON(infraConfigPath, &infraConfig)
+	configErr := ReadJSON(infraConfigPath, &infraConfig)
 	if configErr != nil {
 		os.Exit(1)
 	}
@@ -94,10 +92,10 @@ func run(cmd *cobra.Command, args []string) {
 	isDeployOnly := cmd.CalledAs() == "deploy"
 	isCreateOnly := cmd.CalledAs() == "create"
 
-	agentsChan := make(chan infrastructure.ChannelRes, len(infraConfig.Infrastructure))
-	infraChan := make(chan infrastructure.ChannelRes, len(infraConfig.Infrastructure))
-	pipelineChan := make(chan infrastructure.ChannelRes, len(infraConfig.Infrastructure))
-	queuesChan := make(chan infrastructure.ChannelRes, len(infraConfig.Infrastructure))
+	agentsChan := make(chan ChannelRes, len(infraConfig.Infrastructure))
+	infraChan := make(chan ChannelRes, len(infraConfig.Infrastructure))
+	pipelineChan := make(chan ChannelRes, len(infraConfig.Infrastructure))
+	queuesChan := make(chan ChannelRes, len(infraConfig.Infrastructure))
 
 	if isCompleteRun || isDeployOnly {
 		copyBuildContextConfig()
@@ -252,7 +250,7 @@ func buildAgentPoolImage() {
 	color.Cyan("[INFO:] AGENT POOL IMAGE BUILT SUCCESSFULLY")
 }
 
-func startAgents(agentsChan chan<- infrastructure.ChannelRes) {
+func startAgents(agentsChan chan<- ChannelRes) {
 	color.Cyan("[INFO:] STARTING ALL AGENTS")
 
 	var waitGroup sync.WaitGroup
@@ -264,7 +262,7 @@ func startAgents(agentsChan chan<- infrastructure.ChannelRes) {
 	close(agentsChan)
 }
 
-func createInfrastructure(infraChan chan<- infrastructure.ChannelRes) {
+func createInfrastructure(infraChan chan<- ChannelRes) {
 	color.Cyan("[INFO:] CREATING ALL INFRASTRUCTURE")
 
 	var waitGroup sync.WaitGroup
@@ -276,7 +274,7 @@ func createInfrastructure(infraChan chan<- infrastructure.ChannelRes) {
 	close(infraChan)
 }
 
-func createPipelines(isCompleteRun bool, pipelineChan chan<- infrastructure.ChannelRes) {
+func createPipelines(isCompleteRun bool, pipelineChan chan<- ChannelRes) {
 	color.Cyan("[INFO:] CREATING ALL PIPELINES")
 
 	var waitGroup sync.WaitGroup
@@ -289,7 +287,7 @@ func createPipelines(isCompleteRun bool, pipelineChan chan<- infrastructure.Chan
 	close(pipelineChan)
 }
 
-func quequePipelines(queuesChan chan<- infrastructure.ChannelRes) {
+func quequePipelines(queuesChan chan<- ChannelRes) {
 	color.Cyan("[INFO:] QUEUEING ALL PIPELINES")
 
 	var waitGroup sync.WaitGroup
@@ -303,7 +301,7 @@ func quequePipelines(queuesChan chan<- infrastructure.ChannelRes) {
 }
 
 // workers
-func agentWorker(appDetails infrastructure.AppDetails, waitGroup *sync.WaitGroup, agentsChan chan<- infrastructure.ChannelRes) {
+func agentWorker(appDetails AppDetails, waitGroup *sync.WaitGroup, agentsChan chan<- ChannelRes) {
 	defer waitGroup.Done()
 
 	containerName := appDetails.Name + "_deployment_agent"
@@ -314,7 +312,7 @@ func agentWorker(appDetails infrastructure.AppDetails, waitGroup *sync.WaitGroup
 		ContainerName: containerName,
 	}
 
-	channelRes := infrastructure.ChannelRes{
+	channelRes := ChannelRes{
 		Key:   appDetails.Name,
 		Value: true,
 	}
@@ -326,9 +324,9 @@ func agentWorker(appDetails infrastructure.AppDetails, waitGroup *sync.WaitGroup
 	agentsChan <- channelRes
 }
 
-func infraWorker(appDetails infrastructure.AppDetails, waitGroup *sync.WaitGroup, infraChan chan<- infrastructure.ChannelRes) {
+func infraWorker(appDetails AppDetails, waitGroup *sync.WaitGroup, infraChan chan<- ChannelRes) {
 	defer waitGroup.Done()
-	channelRes := infrastructure.ChannelRes{
+	channelRes := ChannelRes{
 		Key:   appDetails.Name,
 		Value: true,
 	}
@@ -351,9 +349,9 @@ func infraWorker(appDetails infrastructure.AppDetails, waitGroup *sync.WaitGroup
 	infraChan <- channelRes
 }
 
-func pipelineWorker(isCompleteRun bool, appDetails infrastructure.AppDetails, waitGroup *sync.WaitGroup, pipelineChan chan<- infrastructure.ChannelRes) {
+func pipelineWorker(isCompleteRun bool, appDetails AppDetails, waitGroup *sync.WaitGroup, pipelineChan chan<- ChannelRes) {
 	defer waitGroup.Done()
-	channelRes := infrastructure.ChannelRes{
+	channelRes := ChannelRes{
 		Key:   appDetails.Name,
 		Value: true,
 	}
@@ -366,7 +364,9 @@ func pipelineWorker(isCompleteRun bool, appDetails infrastructure.AppDetails, wa
 	}
 
 	if (isCompleteRun && isInfraCreated) || !isCompleteRun {
-		err := azpipelines.CreatePipelineFromYaml(appDetails.Pipeline, infraConfig.DevOpsOrg)
+		pipelineDetails := NewPipelineCreate(appDetails, infraConfig.DevOpsOrg)
+
+		err := azpipelines.CreatePipelineFromYaml(*pipelineDetails)
 		if err != nil {
 			color.Red("[PIPELINE %s:] [ERR:] => [AZ PIPELINES] => FAILED TO CREATE PIPELINE FOR APP %s OF TYPE %s => %s", appDetails.Name, appDetails.Type, err.Error())
 			channelRes.Value = false
@@ -376,10 +376,10 @@ func pipelineWorker(isCompleteRun bool, appDetails infrastructure.AppDetails, wa
 	pipelineChan <- channelRes
 }
 
-func queuePipelineWorker(appDetails infrastructure.AppDetails, waitGroup *sync.WaitGroup, queuesChan chan<- infrastructure.ChannelRes) {
+func queuePipelineWorker(appDetails AppDetails, waitGroup *sync.WaitGroup, queuesChan chan<- ChannelRes) {
 	defer waitGroup.Done()
 
-	channelRes := infrastructure.ChannelRes{
+	channelRes := ChannelRes{
 		Key:   appDetails.Name,
 		Value: true,
 	}
@@ -401,7 +401,9 @@ func queuePipelineWorker(appDetails infrastructure.AppDetails, waitGroup *sync.W
 	if areAgentAndPipelineUp {
 		parameters := getPipelineParams(appDetails)
 
-		pipelineQueueRes, err := azpipelines.QueuePipeline(appDetails.Pipeline, infraConfig.DevOpsOrg, parameters)
+		pipelineDetails := NewPipelineCreate(appDetails, infraConfig.DevOpsOrg)
+
+		pipelineQueueRes, err := azpipelines.QueuePipeline(*pipelineDetails, parameters)
 		if err != nil {
 			color.Red("[ERR:]=> [AZ PIPELINES %s] => FAILED TO RUN PIPELINE => %s", appDetails.Pipeline.Name, err.Error())
 			channelRes.Value = false
@@ -444,25 +446,32 @@ func queuePipelineWorker(appDetails infrastructure.AppDetails, waitGroup *sync.W
 }
 
 // infrastructure wrappers
-func createFuncApp(funcApp infrastructure.AppDetails) error {
+func createFuncApp(funcApp AppDetails) error {
 
 	color.Cyan("[FUNCAPP %s:] CREATING AZURE FUNCTION APP", funcApp.Name)
 	errorMsg := ""
-	rgError := azresourcegroup.CreateAzureResourceGroup(funcApp.ResourceGroup, funcApp.Location)
+
+	resGroupDetails := NewResourceGroupCreate(funcApp)
+
+	rgError := azresourcegroup.CreateAzureResourceGroup(*resGroupDetails)
 	if rgError != nil {
 		errorMsg = fmt.Sprintf("[ERR:] [FUNCAPP %s:] => [AZURE RESOURCE GROUP] => %s", funcApp.Name, rgError.Error())
 		return errors.New(errorMsg)
 	}
 
 	// make sure that the storage account does not exist. This is important to avoid overwriting function logs etc.
-	saError := azstorageaccount.CreateAzureStorageAccount(funcApp.StorageAccount, funcApp.Location, funcApp.ResourceGroup)
+	storageAccDetails := NewStorageAccountCreate(funcApp)
+
+	saError := azstorageaccount.CreateAzureStorageAccount(*storageAccDetails)
 	if saError != nil {
 		errorMsg = fmt.Sprintf("[ERR:] [FUNCAPP %s:] => [AZURE STORAGE ACCOUNT] => %s", funcApp.Name, saError.Error())
 		return errors.New(errorMsg)
 	}
 
 	// make sure the functionapp does not exist. This is important to avoid overwriting function during deployment
-	faError := azfunction.CreateAzureFunction(funcApp)
+	funcAppDetails := NewFunctionCreate(funcApp)
+
+	faError := azfunction.CreateAzureFunction(*funcAppDetails)
 	if faError != nil {
 		errorMsg = fmt.Sprintf("[ERR:] [FUNCAPP %s:] => [AZURE FUNCTIONAPP] => %s", funcApp.Name, faError.Error())
 		return errors.New(errorMsg)
@@ -475,7 +484,7 @@ func createFuncApp(funcApp infrastructure.AppDetails) error {
 
 	// set the environment variables for the functionapp
 	if len(funcApp.Settings) != 0 {
-		faSettingsErr := azfunction.SetAzureFunctionEnv(funcApp.Name, funcApp.ResourceGroup, funcApp.Settings)
+		faSettingsErr := azfunction.SetAzureFunctionEnv(*funcAppDetails)
 		if faSettingsErr != nil {
 			errorMsg = fmt.Sprintf("[ERR:] [FUNCAPP %s:] => [AZURE FUNCTIONAPP SETTINGS] => %s", funcApp.Name, faSettingsErr.Error())
 			return errors.New(errorMsg)
@@ -485,26 +494,33 @@ func createFuncApp(funcApp infrastructure.AppDetails) error {
 	return nil
 }
 
-func createWebapp(webapp infrastructure.AppDetails) error {
+func createWebapp(webapp AppDetails) error {
 
 	color.Cyan("[WEBAPP %s:] CREATING AZURE WEBAPP", webapp.Name)
 	errorMsg := ""
+
+	resGroupDetails := NewResourceGroupCreate(webapp)
+
 	// make sure the resource group for the webapp exists
-	rgError := azresourcegroup.CreateAzureResourceGroup(webapp.ResourceGroup, webapp.Location)
+	rgError := azresourcegroup.CreateAzureResourceGroup(*resGroupDetails)
 	if rgError != nil {
 		errorMsg = fmt.Sprintf("[ERR:] [WEBAPP %s:] => [AZURE RESOURCE GROUP] => %s", webapp.Name, rgError.Error())
 		return errors.New(errorMsg)
 	}
 
+	aspDetails := NewAppServicePlanCreate(webapp)
+
 	// make sure the app service plan exists
-	aseError := azappservice.CreateAzureAppServicePlan(webapp)
+	aseError := azappservice.CreateAzureAppServicePlan(*aspDetails)
 	if aseError != nil {
 		errorMsg = fmt.Sprintf("[ERR:] [WEBAPP %s:] => [AZURE APP SERVICE PLAN] => %s", webapp.Name, aseError.Error())
 		return errors.New(errorMsg)
 	}
 
+	webappDetails := NewWebAppCreate(webapp)
+
 	// create the webapp
-	waError := azwebapp.CreateAzureWebApp(webapp)
+	waError := azwebapp.CreateAzureWebApp(*webappDetails)
 	if waError != nil {
 		errorMsg = fmt.Sprintf("[ERR:] [WEBAPP %s:] => [AZURE WEBAPP] => %s", webapp.Name, waError.Error())
 		return errors.New(errorMsg)
@@ -514,7 +530,7 @@ func createWebapp(webapp infrastructure.AppDetails) error {
 }
 
 // utility functions
-func isResourceCreated(channelResults []infrastructure.ChannelRes, key string) bool {
+func isResourceCreated(channelResults []ChannelRes, key string) bool {
 	if len(channelResults) == 0 {
 		return false
 	}
@@ -593,7 +609,7 @@ func printResults(isCompleteRun bool, isCreateRun bool, isDeployRun bool) {
 	t.Render()
 }
 
-func getPipelineParams(appDetails infrastructure.AppDetails) []string {
+func getPipelineParams(appDetails AppDetails) []string {
 	parameters := []string{
 		"azureSubscription=" + azlogin.SelectedSubscription.ID,
 		"appName=" + appDetails.Name,

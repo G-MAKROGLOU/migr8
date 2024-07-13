@@ -4,15 +4,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/G-MAKROGLOU/infrastructure"
 	"github.com/spf13/cobra"
 )
 
 var (
 	infraConfigPath string
-	infraConfig     = infrastructure.InfraConfig{}
+	infraConfig     = InfraConfig{}
 
-	rootCmd = &cobra.Command{Use: "migr8"}
+	rootCmd = &cobra.Command{Use: "migr8", Version: "1.0.0"}
 )
 
 // Execute starts the root cmd

@@ -16,15 +16,15 @@
 </p>
 
 <p>
-    The third option that Azure provides is to run Self Hosted Agent Pools in containers. This is the option ```migr8``` takes advantage of. 
+    The third option that Azure provides is to run Self Hosted Agent Pools in containers. This is the option migr8 takes advantage of. 
 </p>
 
 # HOW IT WORKS
 
 <p>
-    Simply put, the only thing you'll have to do is to describe your infrastructure and how you want it to be deployed via ```JSON``` and ```YML```. ```migr8``` then will take care of creating the infrastructure, spawning an agent 
-    container for each infrastructure piece described, creating the pipeline from the ```yml``` description, and finally queueing the pipeline for deployment. You can also opt-in to specific functionalities and for example, just create 
-    the infrastructure, or just deploy it. 
+    Simply put, the only thing you'll have to do is to describe your infrastructure and how you want it to be deployed with JSON and YML files. migr8 then will take care of creating the infrastructure, spawning an agent 
+    container for each infrastructure piece described, creating the pipeline from the yml description in your repository, and finally queueing the pipeline for deployment. You can also opt-in to specific functionalities and for example, 
+    just create the infrastructure, or just deploy it. 
 </p>
 
 <p>The steps required sum up to:</p>
@@ -38,7 +38,9 @@
     <li>Turn your project private again if your turned it public in step 3.</li>
 </ol>
 
-<p>When creating infrastructure ```migr8``` first looks if all the required resources exist. If they already exist, it skips the creation. The same applies when creating pipelines.</p>
+<p>When creating infrastructure, migr8 first looks if all the required resources exist. If they already exist, it skips the creation. The same applies when creating pipelines.</p>
+
+<p>See further down below for configuration reference, example yml descriptions, usage examples, and more.</p>
 
 # INSTALLATION
 ``cd migr8``<br><br>

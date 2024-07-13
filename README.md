@@ -80,14 +80,10 @@ Add the executable to your path in order to execute it from anywhere
         }
     ]
 }
-
-
-
 ```
+
 <h3 style="text-decoration:underline;">INFRASTRUCTURE CONFIGURATION PROPERTIES</h3>
 
-```
-<h3 style="text-decoration:underline;">INFRASTRUCTURE CONFIGURATION PROPERTIES</h3>
 
 ```pat```       Personal Access Token created in Azure DevOPS
 

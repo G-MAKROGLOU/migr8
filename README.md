@@ -174,7 +174,7 @@ Add the executable to your path in order to execute it from anywhere
 
 <h3 style="text-decoration:underline;">INFRASTRUCTURE INSTRUCTIONS AND REMARKS</h3>
 
-<p>In order create any infrastructure (Function Apps & WebApps for now) you need to have installed:</p>
+<p>In order to create any infrastructure (Function Apps & WebApps for now) you need to have installed:</p>
 
 <ul>
     <li>az cli</li>

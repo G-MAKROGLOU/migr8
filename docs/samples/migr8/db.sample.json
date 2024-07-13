@@ -1,0 +1,14 @@
+{
+    "sourceDb": {
+        "host": "",
+        "port": "",
+        "user": "",
+        "password": ""
+    },
+    "destinationDb": {
+        "host": "",
+        "port": "",
+        "user": "",
+        "password": ""
+    }
+}

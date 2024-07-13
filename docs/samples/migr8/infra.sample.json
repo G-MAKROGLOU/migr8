@@ -1,0 +1,69 @@
+
+{
+    "pat": "PERSONALL ACCESS TOKEN GENERATED FROM DEVOPS DASHBOARD",
+    "devopsOrg": "https://dev.azure.com/<organization-name>",
+    "infrastructure": [
+        {   
+            "type": "function",
+            "name": "test-cron-sync",
+            "storageAccount": "testcronsyncsa",
+            "resourceGroup": "Resource Group Name",
+            "location": "westeurope",
+            "pipeline": {
+                "name": "TestCronSync",
+                "yamlPath": "./azure-pipelines.yml",
+                "project": "functions",
+                "repository": "CronSync",
+                "branch": "main"
+            },
+            "settings": [
+                {
+                    "name": "EnvVarKey",
+                    "value": "Value"
+                }
+            ]
+        },
+        {
+            "type": "webapp",
+            "name": "test-octant",
+            "resourceGroup": "Resource Group Name",
+            "appServicePlan": "App Service Plan Name",
+            "runtime": "NODE:16LTS",
+            "location": "westeurope",
+            "pipeline": {
+                "name": "TestOctant",
+                "yamlPath": "./azure-pipelines.yml",
+                "project": "octant-client",
+                "repository": "octant-client",
+                "branch": "main"
+            },
+            "settings": [
+                {
+                    "name": "REACT_APP_ENV_VAR",
+                    "value": "Value"
+                }
+            ]
+        },
+        {
+            "type": "webapp",
+            "name": "test-octant-api",
+            "resourceGroup": "Resource Group Name",
+            "appServicePlan": "App Service Plan Name",
+            "runtime": "NODE:18LTS",
+            "location": "westeurope",
+            "pipeline": {
+                "name": "octant-backend",
+                "yamlPath": "./azure-pipelines.yml",
+                "project": "octant-backend",
+                "repository": "octant-backend",
+                "branch": "main"
+            },
+            "settings": [
+                {
+                    "name": "NODE_ENV",
+                    "value": "production"
+                }
+            ]
+        }
+    ]
+}

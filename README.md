@@ -206,6 +206,101 @@ steps:
 
 ```
 
+<h2 style="text-decoration:underline;">NODEJS AZURE FUNCTIONS YAML TEMPLATE</h2>
+
+```yml
+trigger: none
+
+
+parameters:
+  - name: agentPool
+    type: string
+    default: 'ubuntu-latest'
+  - name: agent
+    type: string
+    default: 'default'
+  - name: azureSubscription
+    type: string
+    default: '' 
+  - name: appName
+    type: string
+    default: 'default'
+  - name: resourceGroup
+    type: string
+    default: 'default'
+
+variables:
+  _agentPool: ${{ parameters.agentPool }}
+  _agent: ${{ parameters.agent }}
+  _azSub: ${{ parameters.azureSubscription }}
+
+stages:
+- stage: Build
+  displayName: Build stage
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      name: $(_agentPool)
+      demands:
+      - agent.name -equals $(_agent)
+
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '10.x'
+      displayName: 'Install Node.js'
+
+    - script: |
+        if [ -f extensions.csproj ]
+        then
+            dotnet build extensions.csproj --runtime ubuntu.16.04-x64 --output ./bin
+        fi
+      displayName: 'Build extensions'
+
+    - script: |
+        npm install
+        npm run build --if-present
+        npm run test --if-present
+      displayName: 'Prepare binaries'
+
+    - task: ArchiveFiles@2
+      displayName: 'Archive files'
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
+        includeRootFolder: false
+        archiveType: zip
+        archiveFile: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
+        replaceExistingArchive: true
+
+    - upload: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
+      artifact: drop
+
+- stage: Deploy
+  displayName: Deploy stage
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - deployment: Deploy
+    displayName: Deploy
+    environment: ${{ parameters.appName }}
+    pool:
+      name: $(_agentPool)
+      demands:
+      - agent.name -equals $(_agent)
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureFunctionApp@1
+            displayName: 'Azure Functions NodeJS deploy'
+            inputs:
+              azureSubscription: '$(_azSub)'
+              appType: functionAppLinux
+              appName: ${{ parameters.appName }}
+              package: '$(Pipeline.Workspace)/drop/$(Build.BuildId).zip'
+```
+
 
 <h2 style="text-decoration:underline;">REACT YAML TEMPLATE</h2>
 

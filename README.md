@@ -86,6 +86,9 @@ Add the executable to your path in order to execute it from anywhere
 ```
 <h3 style="text-decoration:underline;">INFRASTRUCTURE CONFIGURATION PROPERTIES</h3>
 
+```
+<h3 style="text-decoration:underline;">INFRASTRUCTURE CONFIGURATION PROPERTIES</h3>
+
 ```pat```       Personal Access Token created in Azure DevOPS
 
 ```devopsOrg``` The azure devops organization your projects belong to. Usually in the format https://dev.azure.com/<organization name\>
@@ -104,6 +107,22 @@ Add the executable to your path in order to execute it from anywhere
 ```infrastructure.storageAccount``` Only for azure functions. A unique name for a storage account. It will be created if it doesn't exist.
 
 ```infrastructure.appServicePlan``` Only for azure webapps. A unique name for an app service plan. It will be created if it doesn't exist.
+
+```infrastructure.runtime``` A runtime name. WebApps have different runtime naming convetions from Azure Functions. You can run ```az functionapp list-runtimes``` and ```az webapp list-runtimes``` to get the list of runtimes for Azure Functions and WebApps respsectively.
+
+```infrastructure.location``` A location name according to the Azure location naming conventions. You can run ```az account list-locations``` to get the name of the location you want your service to be created.
+
+```infrastructure.pipeline.name``` The name of an existing (or not) pipeline. If the pipeline does not exist, it will be created.
+
+```infrastructure.pipeline.yamlPath``` The path to the azure-pipelines.yml file. Use ```./azure-pipelines.yaml``` if it's located at the root of the repository.
+
+```infrastructure.pipeline.project``` The project inside the Azure DevOPS organization for which the pipeline will be created.
+
+```infrastructure.pipeline.repository``` The name of the repository inside the Azure DevOPS project for which the pipeline will be created.
+
+```infrastructure.pipeline.branch``` The name of the branch that the pipeline should be based on. Use trigger: none to avoid triggering the pipeline on push/pr unless you have purchased parallelization, in which case you don't even need migr8.
+
+```infrastructure.settings``` An array of ```name``` - ```value``` objects that represent the different environment variables of each service. Each application type, has a different way of setting the environment variables. Azure Functions use an ```az cli``` command whereas WebApps integrate them in their ```yaml``` pipeline.
 
 <h3 style="text-decoration:underline;">INFRASTRUCTURE INSTRUCTIONS AND REMARKS</h3>
 

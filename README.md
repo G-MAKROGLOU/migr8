@@ -581,3 +581,16 @@ devops org -> project -> project settings -> agent pools -> add pool with detail
 - Ιf you don't turn the project public, jobs will be queued normally but sequentially regardless of the amount of agents that you spawned. Turning a project public will allow you to run multiple pipelines in parallel, allowing for faster deployments of any number of applications.
 - Self Hosted agents need to be created manually
 - Service connections need to be created manually and with a specific convention (at least for now)
+
+
+<hr>
+
+## Future Plans
+
+The goal is to slowly extend ```migr8``` into a one stop-shop deployment tool that is able to map infrastructure on multiple cloud providers for various services. Currently only Azure (WebApps & Function Apps) is supported. Some of the future plans include:
+
+- More Azure resource types (VMs, AKS, Azure Cosmos DB, Azure Container Instances, Storage Accounts, App Service Plans, Resource Groups, Entra)
+- AWS integration via cdk or ?? (ECS, EC2, Elastic Beanstalk, Lambdas, Kinesis, SQS, Timestream IAM, etc.)
+- GCP integration (Compute, Cloud Functions, Cloud Storage, Google Kubernetes Engine, Cloud Run etc.)
+- DigitalOcean integration (Droplets, Clusters etc.)
+- Persistent agent containers with restart always for Azure

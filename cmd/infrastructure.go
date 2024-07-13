@@ -36,24 +36,28 @@ var (
 		Long:              "Create all the infrastructure needed by an application stack",
 		PersistentPreRun:  prerun,
 		PersistentPostRun: cleanup,
+		Version: rootCmd.Version,
 	}
 	onlyInfraCmd = &cobra.Command{
 		Use:   "create",
 		Short: "Create all the infrastructure needed by an application stack",
 		Long:  "Create all the infrastructure needed by an application stack",
 		Run:   run,
+		Version: rootCmd.Version,
 	}
 	onlyDeployCmd = &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploy all applications based on existing azure pipelines",
 		Long:  "Deploy all applications based on existing azure pipelines",
 		Run:   run,
+		Version: rootCmd.Version,
 	}
 	fullCmd = &cobra.Command{
 		Use:   "complete",
 		Short: "Create and deploy all the infrastructure needed by an application stack",
 		Long:  "Create and deploy all the infrastructure needed by an application stack",
 		Run:   run,
+		Version: rootCmd.Version,
 	}
 )
 

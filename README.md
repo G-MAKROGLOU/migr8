@@ -507,8 +507,6 @@ stages:
 
 <hr/>
 
-## Deploy Infrastructure
-
 ``migr8 infra`` with three available modes:
 
 ```complete``` Creates infrastructure and deploys based on the ```pipeline``` object

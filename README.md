@@ -44,10 +44,17 @@
 <p>See further down below for configuration reference, example yml descriptions, usage examples, and more.</p>
 
 # INSTALLATION
+
+<h2 style="text-decoration:underline;">MANUALLY</h2>
+
+``clone the repo``
 ``cd migr8``<br><br>
 ``go build .``
-
 Add the executable to your path in order to execute it from anywhere
+
+<h2 style="text-decoration:underline;">With go cli</h2>
+
+```go install github.com/G-MAKROGLOU/migr8@latest```
 
 <h1 style="text-decoration:underline;">CONFIGURATION FILES & SAMPLES</h1>
 

@@ -351,7 +351,7 @@ stages:
         enableCustomDeployment: true
         DeploymentType: 'zipDeploy'
         RemoveAdditionalFilesFlag: true
-        AppSettings: '-NODE_ENV production -CRON_API_URL ${{parameters.CRON_API_URL }} -DB_HOST ${{ parameters.DB_HOST }} -DB_PASS ${{ parameters.DB_PASS }} -DB_USER ${{ parameters.DB_USER }} -DEV_DB_HOST ${{ parameters.DEV_DB_HOST }} -DEV_DB_PASS ${{ parameters.DEV_DB_PASS }} -DEV_DB_USER ${{ parameters.DEV_DB_USER }} -NODE_HOST ${{ parameters.NODE_HOST }} -ROUTING_APIKEY ${{ parameters.ROUTING_APIKEY }}  -SWAGGER_STATS_PASSWORD ${{ parameters.SWAGGER_STATS_PASSWORD }} -SWAGGER_STATS_USERNAME ${{ parameters.SWAGGER_STATS_USERNAME }} -COMPANY_DB ${{ parameters.COMPANY_DB }} '
+        AppSettings: '-NODE_ENV ${{ parameters.NODE_ENV }}'
         # remove the lines below if you dont have post install needs
         ScriptType: 'File Path'
         ScriptPath: '$(System.DefaultWorkingDirectory)/post_install_script.bat' # post_install_script.bat should be part of your project in Azure Git

@@ -47,7 +47,7 @@
 
 <h2 style="text-decoration:underline;">MANUALLY</h2>
 
-``clone the repo``
+``clone the repo``<br><br>
 ``cd migr8``<br><br>
 ``go build .``
 Add the executable to your path in order to execute it from anywhere

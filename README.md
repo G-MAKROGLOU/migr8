@@ -542,7 +542,10 @@ stages:
 
 ## Service Connections
 
-<p>In order to grant access to Azure DevOPS to handle deployments on different Azure resource, you need to create a service connection. Follow the below steps to create one:</p>
+<p>
+    In order to grant access to Azure DevOPS to handle deployments on different Azure resources, you need to create a service connection. Service connections are created per project.
+    Follow the below steps to create one:
+</p>
 
 devops org -> project -> project settings -> service connections -> new service connection with details:
 - azure resource manager (next)

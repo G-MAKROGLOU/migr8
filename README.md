@@ -49,7 +49,7 @@
 
 ``git clone https://github.com/G-MAKROGLOU/migr8.git``<br><br>
 ``cd migr8``<br><br>
-``go build .``
+``go build .``<br><br>
 Add the executable to your path in order to execute it from anywhere
 
 <h2 style="text-decoration:underline;">With go cli</h2>

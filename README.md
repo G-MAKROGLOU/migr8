@@ -127,7 +127,6 @@ Add the executable to your path in order to execute it from anywhere
 <ul>
     <li>az cli</li>
     <li>docker</li>
-    <li>some az cli extensions</li>
 </ul>
 
 <h2 style="text-decoration:underline;">.NET 6.0 AZURE FUNCTIONS YAML TEMPLATE</h2>
@@ -476,7 +475,7 @@ stages:
 
 ### Flags
 
-``-i`` The absolute path to an infrastructure configuration file. See example on top
+``-i`` The absolute path to an infrastructure configuration file. See example below
 
 
 ### Examples

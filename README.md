@@ -1,7 +1,8 @@
 # WHY
 
 <p>
-    By default, Azure provided the ability to run deployment pipelines on their own infrastructure for free but this functionality now comes with a cost after a series of events that were using the pipelines for malicious purposes.
+    Initially, Azure provided the ability to run deployment pipelines on their own infrastructure for free but this 
+    functionality now comes with a cost after a series of events that were using the pipelines for malicious purposes.
     Currently, if you wish to use Azure's infrastructure to run your pipelines you have two options:    
 </p>
 
@@ -11,8 +12,7 @@
 </ul>
 
 <p>
-    A second option is to run Self Hosted Agent Pools on your own infrastructure, and purchase parallelization with the burdens of purchasing and maintaining the hardware. Also, in case you need parellelization, you'll have to
-    purchase it.
+    Another way to utilize Azure pipelines is to run Self Hosted Agent Pools on your own infrastructure, and purchase parallelization with the burdens of purchasing and maintaining the hardware. Also, in case you need parellelization, you'll have to purchase it.
 </p>
 
 <p>
@@ -174,7 +174,7 @@ Add the executable to your path in order to execute it from anywhere
 
 <h3 style="text-decoration:underline;">INFRASTRUCTURE INSTRUCTIONS AND REMARKS</h3>
 
-<p>In order create any infrastructure (Function Apps & WebApps for now) you need to have installed:</p>
+<p>In order to create any infrastructure (Function Apps & WebApps for now) you need to have installed:</p>
 
 <ul>
     <li>az cli</li>
@@ -552,7 +552,7 @@ stages:
 
 <p>
     In order to grant access to Azure DevOPS to handle deployments on different Azure resources, you need to create a service connection. Service connections are created per project.
-    Follow the below steps to create one:
+    Follow the steps below to create one:
 </p>
 
 devops org -> project -> project settings -> service connections -> new service connection with details:
@@ -568,7 +568,7 @@ devops org -> project -> project settings -> service connections -> new service 
 
 ## Self Hosted Agent Pools
 
-<p>The ability to have Self Hosted Agent Pools for pipelines is what makes possible the free parallelization of deployment jobs without having to maintain the infrastructure hosting the agent. Follow the below steps to create one:</p>
+<p>The ability to have Self Hosted Agent Pools for pipelines is what makes possible the free parallelization of deployment jobs without having to maintain the infrastructure hosting the agent. Follow the steps below to create one:</p>
 
 devops org -> project -> project settings -> agent pools -> add pool with details:
 - New 

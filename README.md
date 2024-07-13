@@ -552,7 +552,7 @@ stages:
 
 <p>
     In order to grant access to Azure DevOPS to handle deployments on different Azure resources, you need to create a service connection. Service connections are created per project.
-    Follow the below steps to create one:
+    Follow the steps below to create one:
 </p>
 
 devops org -> project -> project settings -> service connections -> new service connection with details:
@@ -568,7 +568,7 @@ devops org -> project -> project settings -> service connections -> new service 
 
 ## Self Hosted Agent Pools
 
-<p>The ability to have Self Hosted Agent Pools for pipelines is what makes possible the free parallelization of deployment jobs without having to maintain the infrastructure hosting the agent. Follow the below steps to create one:</p>
+<p>The ability to have Self Hosted Agent Pools for pipelines is what makes possible the free parallelization of deployment jobs without having to maintain the infrastructure hosting the agent. Follow the steps below to create one:</p>
 
 devops org -> project -> project settings -> agent pools -> add pool with details:
 - New 

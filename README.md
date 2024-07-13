@@ -1,3 +1,45 @@
+# WHY
+
+<p>
+    By default, Azure provided the ability to run deployment pipelines on their own infrastructure for free but this functionality now comes with a cost after a series of events that were using the pipelines for malicious purposes.
+    Currently, if you wish to use Azure's infrastructure to run your pipelines you have two options:    
+</p>
+
+<ul>
+    <li>Purchase compute</li>
+    <li>Request free compute for a private project that has to pass a review first</li>
+</ul>
+
+<p>
+    A second option is to run Self Hosted Agent Pools on your own infrastructure, and purchase parallelization with the burdens of purchasing and maintaining the hardware. Also, in case you need parellelization, you'll have to
+    purchase it.
+</p>
+
+<p>
+    The third option that Azure provides is to run Self Hosted Agent Pools in containers. This is the option ```migr8``` takes advantage of. 
+</p>
+
+# HOW IT WORKS
+
+<p>
+    Simply put, the only thing you'll have to do is to describe your infrastructure and how you want it to be deployed via ```JSON``` and ```YML```. ```migr8``` then will take care of creating the infrastructure, spawning an agent 
+    container for each infrastructure piece described, creating the pipeline from the ```yml``` description, and finally queueing the pipeline for deployment. You can also opt-in to specific functionalities and for example, just create 
+    the infrastructure, or just deploy it. 
+</p>
+
+<p>The steps required sum up to:</p>
+
+<ol>
+    <li>Create an azure-pipelines.yml file in your project with your pipeline description and trigger: none. (See examples below)</li>
+    <li>Push your code to Azure DevOPS</li>
+    <li>Turn your project public. This is important for free parallelization when queueing pipelines but not required (See reasons below). It is not required when you are just creating infrastructure.</li>
+    <li>Describe your infrastructure as shown in the examples below</li>
+    <li>Run migr8 in your preferred mode.</li>
+    <li>Turn your project private again if your turned it public in step 3.</li>
+</ol>
+
+<p>When creating infrastructure ```migr8``` first looks if all the required resources exist. If they already exist, it skips the creation. The same applies when creating pipelines.</p>
+
 # INSTALLATION
 ``cd migr8``<br><br>
 ``go build .``
@@ -498,7 +540,10 @@ stages:
 
 <hr>
 
-## Create a Service Connection
+## Service Connections
+
+<p>In order to grant access to Azure DevOPS to handle deployments on different Azure resource, you need to create a service connection. Follow the below steps to create one:</p>
+
 devops org -> project -> project settings -> service connections -> new service connection with details:
 - azure resource manager (next)
 - service principal (automatic) (next)
@@ -510,7 +555,10 @@ devops org -> project -> project settings -> service connections -> new service 
 
 <hr>
 
-## Create a Self Hosted Agent
+## Self Hosted Agent Pools
+
+<p>The ability to have Self Hosted Agent Pools for pipelines is what makes possible the free parallelization of deployment jobs without having to maintain the infrastructure hosting the agent. Follow the below steps to create one:</p>
+
 devops org -> project -> project settings -> agent pools -> add pool with details:
 - New 
 - SelfHosted

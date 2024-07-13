@@ -1,7 +1,8 @@
 # WHY
 
 <p>
-    By default, Azure provided the ability to run deployment pipelines on their own infrastructure for free but this functionality now comes with a cost after a series of events that were using the pipelines for malicious purposes.
+    Initially, Azure provided the ability to run deployment pipelines on their own infrastructure for free but this 
+    functionality now comes with a cost after a series of events that were using the pipelines for malicious purposes.
     Currently, if you wish to use Azure's infrastructure to run your pipelines you have two options:    
 </p>
 
@@ -11,8 +12,7 @@
 </ul>
 
 <p>
-    A second option is to run Self Hosted Agent Pools on your own infrastructure, and purchase parallelization with the burdens of purchasing and maintaining the hardware. Also, in case you need parellelization, you'll have to
-    purchase it.
+    Another way to utilize Azure pipelines is to run Self Hosted Agent Pools on your own infrastructure, and purchase parallelization with the burdens of purchasing and maintaining the hardware. Also, in case you need parellelization, you'll have to purchase it.
 </p>
 
 <p>

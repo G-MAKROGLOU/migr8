@@ -16,7 +16,8 @@
 </p>
 
 <p>
-    The third option that Azure provides is to run Self Hosted Agent Pools in containers. This is the option migr8 takes advantage of. 
+    The third option that Azure provides is to run Self Hosted Agent Pools in containers. This is the option migr8 takes advantage of to allow free n* amount of parallel deployment jobs completely for free without a dedicated host
+    or setup overhead. Just be sure that your machine can afford spawning the amount of agent containers that you are trying to spawn.
 </p>
 
 # HOW IT WORKS

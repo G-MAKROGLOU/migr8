@@ -36,27 +36,27 @@ var (
 		Long:              "Create all the infrastructure needed by an application stack",
 		PersistentPreRun:  prerun,
 		PersistentPostRun: cleanup,
-		Version: rootCmd.Version,
+		Version:           rootCmd.Version,
 	}
 	onlyInfraCmd = &cobra.Command{
-		Use:   "create",
-		Short: "Create all the infrastructure needed by an application stack",
-		Long:  "Create all the infrastructure needed by an application stack",
-		Run:   run,
+		Use:     "create",
+		Short:   "Create all the infrastructure needed by an application stack",
+		Long:    "Create all the infrastructure needed by an application stack",
+		Run:     run,
 		Version: rootCmd.Version,
 	}
 	onlyDeployCmd = &cobra.Command{
-		Use:   "deploy",
-		Short: "Deploy all applications based on existing azure pipelines",
-		Long:  "Deploy all applications based on existing azure pipelines",
-		Run:   run,
+		Use:     "deploy",
+		Short:   "Deploy all applications based on existing azure pipelines",
+		Long:    "Deploy all applications based on existing azure pipelines",
+		Run:     run,
 		Version: rootCmd.Version,
 	}
 	fullCmd = &cobra.Command{
-		Use:   "complete",
-		Short: "Create and deploy all the infrastructure needed by an application stack",
-		Long:  "Create and deploy all the infrastructure needed by an application stack",
-		Run:   run,
+		Use:     "complete",
+		Short:   "Create and deploy all the infrastructure needed by an application stack",
+		Long:    "Create and deploy all the infrastructure needed by an application stack",
+		Run:     run,
 		Version: rootCmd.Version,
 	}
 )
@@ -220,10 +220,15 @@ func login() {
 }
 
 func copyBuildContextConfig() {
-	err := agentpool.CreateBuildCtx("migr8_agentpool_build_ctx")
-	if err != nil {
-		color.Red(err.Error())
-		os.Exit(1)
+	ctxPath := "migr8_agentpool_build_ctx"
+
+	stat, _ := os.Stat(ctxPath)
+	if stat == nil {
+		if err := agentpool.CreateBuildCtx(ctxPath); err != nil {
+			color.Red(err.Error())
+			os.Exit(1)
+
+		}
 	}
 }
 
@@ -237,7 +242,7 @@ func initalizeDockerClient() {
 }
 
 func buildAgentPoolImage() {
-	dir, homeDirErr := os.UserHomeDir()
+	dir, homeDirErr := os.Getwd()
 	if homeDirErr != nil {
 		color.Red("[ERR:] => HOME DIR => %s", homeDirErr.Error())
 		os.Exit(1)

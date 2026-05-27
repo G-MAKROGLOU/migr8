@@ -4,8 +4,8 @@ github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 h1:L/gRVlceqvL25
 github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161/go.mod h1:xomTg63KZ2rFqZQzSB4Vz2SUXa1BpHTVz9L5PTmPC4E=
 github.com/G-MAKROGLOU/containers v0.0.0-20240713115820-784413a54d12 h1:riO6ZD5zDK6xu7tNKPi2lDIQCFj0vFObIAGSAcTstPQ=
 github.com/G-MAKROGLOU/containers v0.0.0-20240713115820-784413a54d12/go.mod h1:XeGFZistEMD/jKyInwApWVTpcToY3U5hXBYWBsN/BBs=
-github.com/G-MAKROGLOU/devops v0.0.0-20240713230334-32dfd3e599a2 h1:L73wiujrrUoK95IzZZbZpsXlylMHU4mH+akoZVlktNw=
-github.com/G-MAKROGLOU/devops v0.0.0-20240713230334-32dfd3e599a2/go.mod h1:BkVXzEBKaPEadNe5KOM44VsXvfEJBtXfqhRUTHyDYI0=
+github.com/G-MAKROGLOU/devops v0.0.1 h1:8prV5PMFfVBwqqtT1cB4YwoQwzoLFk/TUSwB/4z5mnI=
+github.com/G-MAKROGLOU/devops v0.0.1/go.mod h1:4HgaesCBEsIsY+hXtghgpQwLM6C4uKjH/tpdpoZh4jw=
 github.com/G-MAKROGLOU/infrastructure v0.0.0-20240713215514-c87060ef9528 h1:hRmTxSqRpYpJPT195LRTNI3c1077aLt6aGk8pBu0xQs=
 github.com/G-MAKROGLOU/infrastructure v0.0.0-20240713215514-c87060ef9528/go.mod h1:z6W2Z3zRzWufzrYX5qgGCp1rhs02q8QZHSH1azHV8w4=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
@@ -145,6 +145,7 @@ golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8T
 golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
+google.golang.org/genproto v0.0.0-20230920204549-e6e6cdab5c13 h1:vlzZttNJGVqTsRFU9AmdnrcO1Znh8Ew9kCD//yjigk0=
 google.golang.org/genproto/googleapis/api v0.0.0-20240520151616-dc85e6b867a5 h1:P8OJ/WCl/Xo4E4zoe4/bifHpSmmKwARqyqE4nW6J2GQ=
 google.golang.org/genproto/googleapis/api v0.0.0-20240520151616-dc85e6b867a5/go.mod h1:RGnPtTG7r4i8sPlNyDeikXF99hMM+hN6QMm4ooG9g2g=
 google.golang.org/genproto/googleapis/rpc v0.0.0-20240515191416-fc5f0ca64291 h1:AgADTJarZTBqgjiUzRgfaBchgYB3/WFTC80GPwsMcRI=

@@ -62,7 +62,7 @@ var (
 
 func init() {
 	infraCmd.PersistentFlags().StringVarP(&infraConfigPath, "infraConfig", "i", "", "The infrastructure configuration to be deployed")
-	if err := infraCmd.MarkFlagRequired("infraConfig"); err != nil {
+	if err := infraCmd.MarkPersistentFlagRequired("infraConfig"); err != nil {
 		panic(fmt.Sprintf("failed to mark infraConfig flag as required: %s", err))
 	}
 

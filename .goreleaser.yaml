@@ -1,0 +1,55 @@
+version: 2
+
+project_name: migr8
+
+# Download modules before building (go.mod has already had local replace
+# directives stripped by the workflow step that precedes this action).
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - binary: migr8
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    # Inject the release tag as the binary's version string so that
+    # `migr8 --version` and `migr8 upgrade` both report the correct value.
+    ldflags:
+      - -s -w -X github.com/G-MAKROGLOU/migr8/cmd.version={{.Version}}
+
+archives:
+  # Produce plain binaries (no tarballs) named migr8_<os>_<arch>[.exe].
+  # This matches the asset names that `migr8 upgrade` looks for.
+  - format: binary
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+
+release:
+  github:
+    owner: G-MAKROGLOU
+    name: migr8
+  draft: false
+  # Tags that contain a pre-release identifier (e.g. v1.2.0-rc.1) are marked
+  # as pre-releases on GitHub automatically.
+  prerelease: auto
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+      - "Merge pull request"
+      - "Merge branch"

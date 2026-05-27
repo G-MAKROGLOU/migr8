@@ -1,1 +1,7 @@
 *.exe
+
+# go.work / go.work.sum are local workspace files used to redirect imports to
+# sibling module directories during development.  They must not be committed so
+# that CI and the Go module proxy always resolve the real published versions.
+go.work
+go.work.sum

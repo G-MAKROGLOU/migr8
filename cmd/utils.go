@@ -13,7 +13,7 @@ import (
 	"github.com/fatih/color"
 )
 
-// ReadJSON reads a json file and deserializes it into K
+// ReadJSON reads a JSON file and deserializes it into the provided model pointer.
 func ReadJSON[K interface{}](path string, model K) error {
 	config, readErr := os.ReadFile(path)
 	if readErr != nil {
@@ -22,7 +22,6 @@ func ReadJSON[K interface{}](path string, model K) error {
 	}
 
 	configErr := json.Unmarshal(config, &model)
-
 	if configErr != nil {
 		color.Red("[ERR:] => JSON UNMARSHAL => %s", configErr.Error())
 		return configErr
@@ -30,74 +29,76 @@ func ReadJSON[K interface{}](path string, model K) error {
 	return nil
 }
 
-// NewResourceGroupCreate creates a new ResourceGroupCreate struct
-func NewResourceGroupCreate(funcApp AppDetails) *azresourcegroup.ResourceGroupCreate {
-	resGroupDetails := new(azresourcegroup.ResourceGroupCreate)
-	resGroupDetails.Name = funcApp.ResourceGroup
-	resGroupDetails.Location = funcApp.Location
-	return resGroupDetails
+// NewResourceGroupCreate creates a new ResourceGroupCreate struct.
+func NewResourceGroupCreate(app AppDetails) *azresourcegroup.ResourceGroupCreate {
+	return &azresourcegroup.ResourceGroupCreate{
+		Name:     app.ResourceGroup,
+		Location: app.Location,
+	}
 }
 
-// NewStorageAccountCreate creates a new StorageAccountCreate struct
+// NewStorageAccountCreate creates a new StorageAccountCreate struct.
 func NewStorageAccountCreate(funcApp AppDetails) *azstorageaccount.StorageAccountCreate {
-	saDetails := new(azstorageaccount.StorageAccountCreate)
-	saDetails.Name = funcApp.StorageAccount
-	saDetails.Location = funcApp.Location
-	saDetails.ResourceGroup = funcApp.ResourceGroup
-	return saDetails
+	return &azstorageaccount.StorageAccountCreate{
+		Name:          funcApp.StorageAccount,
+		Location:      funcApp.Location,
+		ResourceGroup: funcApp.ResourceGroup,
+	}
 }
 
-// NewFunctionCreate creates a new FunctionCreate struct
+// NewFunctionCreate creates a new CreateFunction struct.
 func NewFunctionCreate(funcApp AppDetails) *azfunction.CreateFunction {
-	funcAppDetails := new(azfunction.CreateFunction)
-	funcAppDetails.Name           = funcApp.Name
-	funcAppDetails.StorageAccount = funcApp.StorageAccount
-	funcAppDetails.Location       = funcApp.Location
-	funcAppDetails.ResourceGroup  = funcApp.ResourceGroup
-	funcAppDetails.Os             = funcApp.Os
-	funcAppDetails.Runtime        = funcApp.Runtime
-	funcAppDetails.Settings       = make([]azfunction.Setting, len(funcApp.Settings))
-
-	for _, setting := range funcApp.Settings {
-		funcSetting := new(azfunction.Setting)
-		funcSetting.Name = setting.Name
-		funcSetting.Value = setting.Value
-
-		funcAppDetails.Settings = append(funcAppDetails.Settings, *funcSetting)
+	// Bug fix: previously used make([]Setting, len) which pre-fills with N zero-value
+	// items, then appended N real items — producing 2N entries with the first half blank.
+	// Use make([]Setting, 0, len) to allocate capacity without creating empty elements.
+	settings := make([]azfunction.Setting, 0, len(funcApp.Settings))
+	for _, s := range funcApp.Settings {
+		settings = append(settings, azfunction.Setting{
+			Name:  s.Name,
+			Value: s.Value,
+		})
 	}
 
-	return funcAppDetails
+	return &azfunction.CreateFunction{
+		Name:           funcApp.Name,
+		StorageAccount: funcApp.StorageAccount,
+		Location:       funcApp.Location,
+		ResourceGroup:  funcApp.ResourceGroup,
+		Os:             funcApp.Os,
+		Runtime:        funcApp.Runtime,
+		Settings:       settings,
+	}
 }
 
-// NewWebAppCreate creates a new WebAppCreate struct
+// NewWebAppCreate creates a new WebAppCreate struct.
 func NewWebAppCreate(webApp AppDetails) *azwebapp.WebAppCreate {
-	waDetails := new(azwebapp.WebAppCreate)
-	waDetails.Name           = webApp.Name
-    waDetails.ResourceGroup  = webApp.ResourceGroup
-    waDetails.AppServicePlan = webApp.AppServicePlan
-    waDetails.Runtime        = webApp.Runtime
-	return waDetails
+	return &azwebapp.WebAppCreate{
+		Name:           webApp.Name,
+		ResourceGroup:  webApp.ResourceGroup,
+		AppServicePlan: webApp.AppServicePlan,
+		Runtime:        webApp.Runtime,
+	}
 }
 
-// NewAppServicePlanCreate creates a new AppServicePlanCreate struct
+// NewAppServicePlanCreate creates a new AppServicePlanCreate struct.
 func NewAppServicePlanCreate(webApp AppDetails) *azappservice.AppServicePlanCreate {
-	aspDetails := new(azappservice.AppServicePlanCreate)
-	aspDetails.Location = webApp.Location
-	aspDetails.ResourceGroup = webApp.ResourceGroup
-	aspDetails.Location = webApp.Location
-	return aspDetails
+	// Bug fix: Name was never set, causing 'az appservice plan create --name ""'.
+	// Bug fix: Location was set twice; removed the duplicate assignment.
+	return &azappservice.AppServicePlanCreate{
+		Name:          webApp.AppServicePlan,
+		ResourceGroup: webApp.ResourceGroup,
+		Location:      webApp.Location,
+	}
 }
 
-// NewPipelineCreate creates a new PipelineCreate struct
+// NewPipelineCreate creates a new PipelineCreate struct.
 func NewPipelineCreate(appDetails AppDetails, devopsOrg string) *azpipelines.PipelineCreate {
-	pipelineDetails := new(azpipelines.PipelineCreate)
-
-	pipelineDetails.Name       = appDetails.Pipeline.Name
-    pipelineDetails.DevOPSOrg  = devopsOrg
-    pipelineDetails.Project    = appDetails.Pipeline.Project
-    pipelineDetails.YamlPath   = appDetails.Pipeline.YamlPath
-    pipelineDetails.Repository = appDetails.Pipeline.Repository
-    pipelineDetails.Branch     = appDetails.Pipeline.Branch
-
-	return pipelineDetails
+	return &azpipelines.PipelineCreate{
+		Name:       appDetails.Pipeline.Name,
+		DevOPSOrg:  devopsOrg,
+		Project:    appDetails.Pipeline.Project,
+		YamlPath:   appDetails.Pipeline.YamlPath,
+		Repository: appDetails.Pipeline.Repository,
+		Branch:     appDetails.Pipeline.Branch,
+	}
 }

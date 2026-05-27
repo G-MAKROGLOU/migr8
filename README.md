@@ -583,6 +583,7 @@ devops org -> project -> project settings -> agent pools -> add pool with detail
 - Service connections need to be created manually and with a specific convention (at least for now)
 
 
+
 <hr>
 
 ## Future Plans
@@ -594,3 +595,13 @@ The goal is to slowly extend ```migr8``` into a one stop-shop deployment tool th
 - GCP integration (Compute, Cloud Functions, Cloud Storage, Google Kubernetes Engine, Cloud Run etc.)
 - DigitalOcean integration (Droplets, Clusters etc.)
 - Persistent agent containers with restart always for Azure
+
+
+<hr>
+
+## TODO:
+
+- Add tests where possible
+- Change the config to include the subscription so it is not asked after login.
+- Use silent login for az cli
+- Use relative paths instead of absolute for -i flag

@@ -1,11 +1,10 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
-	"regexp"
+	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -61,9 +60,8 @@ var (
 	}
 )
 
-// opeational
 func init() {
-	infraCmd.PersistentFlags().StringVarP(&infraConfigPath, "infraConfig", "i", "", "The infrastructre configuration to be deployed")
+	infraCmd.PersistentFlags().StringVarP(&infraConfigPath, "infraConfig", "i", "", "The infrastructure configuration to be deployed")
 	infraCmd.MarkFlagRequired("infraConfig")
 
 	infraCmd.AddCommand(onlyInfraCmd)
@@ -86,6 +84,8 @@ func prerun(cmd *cobra.Command, args []string) {
 	go func() {
 		<-sigs
 		color.Yellow("RECEIVED TERMINATION SIGNAL. CLEANING UP RESOURCES...")
+		// Bug fix: pass nil so cleanup() knows it was called from the signal handler.
+		// The nil guard at the top of cleanup() handles this safely.
 		cleanup(nil, nil)
 		os.Exit(0)
 	}()
@@ -124,7 +124,8 @@ func run(cmd *cobra.Command, args []string) {
 			pipelinesRes = append(pipelinesRes, pipeline)
 		}
 
-		quequePipelines(queuesChan)
+		// Bug fix: renamed from quequePipelines (typo)
+		queuePipelines(queuesChan)
 		for queue := range queuesChan {
 			queuesRes = append(queuesRes, queue)
 		}
@@ -132,15 +133,27 @@ func run(cmd *cobra.Command, args []string) {
 }
 
 func cleanup(cmd *cobra.Command, args []string) {
+	// Bug fix: cmd.CalledAs() panics on a nil receiver. This function is called both
+	// by Cobra (valid cmd) and directly from the signal handler (nil cmd). Determine
+	// the run mode only when cmd is non-nil; default to false so the container/image
+	// cleanup still runs based on whether containers were actually created.
+	isCompleteRun := false
+	isCreateRun := false
+	isDeployRun := false
 
-	isCompleteRun := cmd.CalledAs() == "complete"
-	isCreateRun := cmd.CalledAs() == "create"
-	isDeployRun := cmd.CalledAs() == "deploy"
+	if cmd != nil {
+		isCompleteRun = cmd.CalledAs() == "complete"
+		isCreateRun = cmd.CalledAs() == "create"
+		isDeployRun = cmd.CalledAs() == "deploy"
+	}
 
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(1)
 
-	if isCompleteRun || isDeployRun {
+	// Clean up containers whenever there are any — this covers both the normal
+	// post-run path and the signal-handler path where cmd is nil but containers
+	// may already have been created.
+	if isCompleteRun || isDeployRun || len(agentpool.ContainerIDs) > 0 {
 		waitGroup.Add(1)
 
 		go func() {
@@ -179,9 +192,8 @@ func cleanup(cmd *cobra.Command, args []string) {
 
 	go func() {
 		defer waitGroup.Done()
-		// delete img build ctx
-		delErr := os.RemoveAll("migr8_agentpool_build_ctx")
-		if delErr != nil {
+		// delete build context directory
+		if err := os.RemoveAll("migr8_agentpool_build_ctx"); err != nil {
 			color.Red("[ERR]: FAILED TO DELETE BUILD CONTEXT DIRECTORY")
 		}
 	}()
@@ -189,12 +201,12 @@ func cleanup(cmd *cobra.Command, args []string) {
 	waitGroup.Wait()
 
 	if cmd != nil {
-		// produce results table
 		printResults(isCompleteRun, isCreateRun, isDeployRun)
 	}
 }
 
 // core run functions
+
 func validateConfig() {
 	if strings.TrimSpace(infraConfig.Pat) == "" {
 		color.Yellow("[WARN:] NO PERSONAL ACCESS TOKEN FOUND. SKIPPING ANY RESOURCE ALLOCATIONS")
@@ -227,16 +239,14 @@ func copyBuildContextConfig() {
 		if err := agentpool.CreateBuildCtx(ctxPath); err != nil {
 			color.Red(err.Error())
 			os.Exit(1)
-
 		}
 	}
 }
 
 func initalizeDockerClient() {
 	color.Cyan("[INFO:] INITIALIZING DOCKER CLIENT")
-	initDockerClientErr := containers.InitializeDockerClient()
-	if initDockerClientErr != nil {
-		color.Red(initDockerClientErr.Error())
+	if err := containers.InitializeDockerClient(); err != nil {
+		color.Red(err.Error())
 		os.Exit(1)
 	}
 }
@@ -250,7 +260,8 @@ func buildAgentPoolImage() {
 
 	color.Cyan("[INFO:] BUILDING AGENT POOL IMAGE")
 
-	buildErr := containers.BuildImage(dir+"\\migr8_agentpool_build_ctx", "azp_agent")
+	// Bug fix: use filepath.Join instead of hardcoded "\\" (Windows-only separator).
+	buildErr := containers.BuildImage(filepath.Join(dir, "migr8_agentpool_build_ctx"), "azp_agent")
 	if buildErr != nil {
 		color.Red("[ERR:] => IMAGE BUILD => %s", buildErr.Error())
 		os.Exit(1)
@@ -287,7 +298,6 @@ func createPipelines(isCompleteRun bool, pipelineChan chan<- ChannelRes) {
 	color.Cyan("[INFO:] CREATING ALL PIPELINES")
 
 	var waitGroup sync.WaitGroup
-
 	for _, appDetails := range infraConfig.Infrastructure {
 		waitGroup.Add(1)
 		go pipelineWorker(isCompleteRun, appDetails, &waitGroup, pipelineChan)
@@ -296,11 +306,12 @@ func createPipelines(isCompleteRun bool, pipelineChan chan<- ChannelRes) {
 	close(pipelineChan)
 }
 
-func quequePipelines(queuesChan chan<- ChannelRes) {
+// queuePipelines queues all deployment pipelines concurrently.
+// Bug fix: renamed from quequePipelines (typo).
+func queuePipelines(queuesChan chan<- ChannelRes) {
 	color.Cyan("[INFO:] QUEUEING ALL PIPELINES")
 
 	var waitGroup sync.WaitGroup
-
 	for _, appDetails := range infraConfig.Infrastructure {
 		waitGroup.Add(1)
 		go queuePipelineWorker(appDetails, &waitGroup, queuesChan)
@@ -310,6 +321,7 @@ func quequePipelines(queuesChan chan<- ChannelRes) {
 }
 
 // workers
+
 func agentWorker(appDetails AppDetails, waitGroup *sync.WaitGroup, agentsChan chan<- ChannelRes) {
 	defer waitGroup.Done()
 
@@ -321,13 +333,10 @@ func agentWorker(appDetails AppDetails, waitGroup *sync.WaitGroup, agentsChan ch
 		ContainerName: containerName,
 	}
 
-	channelRes := ChannelRes{
-		Key:   appDetails.Name,
-		Value: true,
-	}
-	_, agentPoolErr := agentpool.StartAgentPool(configDetails)
-	if agentPoolErr != nil {
-		color.Red("[ERR:] => WEBAPPS => %s", agentPoolErr.Error())
+	channelRes := ChannelRes{Key: appDetails.Name, Value: true}
+
+	if _, err := agentpool.StartAgentPool(configDetails); err != nil {
+		color.Red("[ERR:] => AGENT => %s", err.Error())
 		channelRes.Value = false
 	}
 	agentsChan <- channelRes
@@ -335,51 +344,40 @@ func agentWorker(appDetails AppDetails, waitGroup *sync.WaitGroup, agentsChan ch
 
 func infraWorker(appDetails AppDetails, waitGroup *sync.WaitGroup, infraChan chan<- ChannelRes) {
 	defer waitGroup.Done()
-	channelRes := ChannelRes{
-		Key:   appDetails.Name,
-		Value: true,
+	channelRes := ChannelRes{Key: appDetails.Name, Value: true}
+
+	var err error
+	switch appDetails.Type {
+	case "function":
+		err = createFuncApp(appDetails)
+	case "webapp":
+		err = createWebapp(appDetails)
 	}
 
-	if appDetails.Type == "function" {
-		err := createFuncApp(appDetails)
-		if err != nil {
-			color.Red(err.Error())
-			channelRes.Value = false
-		}
-	}
-
-	if appDetails.Type == "webapp" {
-		err := createWebapp(appDetails)
-		if err != nil {
-			color.Red(err.Error())
-			channelRes.Value = false
-		}
+	if err != nil {
+		color.Red(err.Error())
+		channelRes.Value = false
 	}
 	infraChan <- channelRes
 }
 
 func pipelineWorker(isCompleteRun bool, appDetails AppDetails, waitGroup *sync.WaitGroup, pipelineChan chan<- ChannelRes) {
 	defer waitGroup.Done()
-	channelRes := ChannelRes{
-		Key:   appDetails.Name,
-		Value: true,
-	}
+	channelRes := ChannelRes{Key: appDetails.Name, Value: true}
 
 	isInfraCreated := isResourceCreated(infraRes, appDetails.Name)
 
 	if isCompleteRun && !isInfraCreated {
 		color.Yellow("[PIPELINE %s:] [WARN:] THE INFRASTRUCTURE WAS NOT CREATED. SKIPPING PIPELINE CREATION FOR UNKNOWN INFRASTRUCTURE", appDetails.Pipeline.Name)
 		channelRes.Value = false
+		pipelineChan <- channelRes
+		return
 	}
 
-	if (isCompleteRun && isInfraCreated) || !isCompleteRun {
-		pipelineDetails := NewPipelineCreate(appDetails, infraConfig.DevOpsOrg)
-
-		err := azpipelines.CreatePipelineFromYaml(*pipelineDetails)
-		if err != nil {
-			color.Red("[PIPELINE %s:] [ERR:] => [AZ PIPELINES] => FAILED TO CREATE PIPELINE FOR APP %s OF TYPE %s => %s", appDetails.Name, appDetails.Type, err.Error())
-			channelRes.Value = false
-		}
+	pipelineDetails := NewPipelineCreate(appDetails, infraConfig.DevOpsOrg)
+	if err := azpipelines.CreatePipelineFromYaml(*pipelineDetails); err != nil {
+		color.Red("[PIPELINE %s:] [ERR:] => [AZ PIPELINES] => FAILED TO CREATE PIPELINE FOR APP %s OF TYPE %s => %s", appDetails.Pipeline.Name, appDetails.Name, appDetails.Type, err.Error())
+		channelRes.Value = false
 	}
 
 	pipelineChan <- channelRes
@@ -388,170 +386,129 @@ func pipelineWorker(isCompleteRun bool, appDetails AppDetails, waitGroup *sync.W
 func queuePipelineWorker(appDetails AppDetails, waitGroup *sync.WaitGroup, queuesChan chan<- ChannelRes) {
 	defer waitGroup.Done()
 
-	channelRes := ChannelRes{
-		Key:   appDetails.Name,
-		Value: true,
-	}
+	channelRes := ChannelRes{Key: appDetails.Name, Value: true}
 
 	isAgentUp := isResourceCreated(agentsRes, appDetails.Name)
 	isPipelineUp := isResourceCreated(pipelinesRes, appDetails.Name)
-	areAgentAndPipelineUp := isAgentUp && isPipelineUp
 
-	if !areAgentAndPipelineUp {
-		if !isAgentUp {
-			color.Yellow("[WARN:] => [PIPELINE %s] => THE AGENT WAS NOT CREATED. SKIPPING PIPELINE QUEUEING FOR OFFLINE AGENT", appDetails.Pipeline.Name)
-		}
-		if !isPipelineUp {
-			color.Yellow("[WARN:] => [PIPELINE %s] => THE PIPELINE WAS NOT CREATED. SKIPPING PIPELINE QUEUEING FOR UNKNOWN PIPELINE", appDetails.Pipeline.Name)
-		}
+	if !isAgentUp {
+		color.Yellow("[WARN:] => [PIPELINE %s] => THE AGENT WAS NOT CREATED. SKIPPING PIPELINE QUEUEING FOR OFFLINE AGENT", appDetails.Pipeline.Name)
+		channelRes.Value = false
+	}
+	if !isPipelineUp {
+		color.Yellow("[WARN:] => [PIPELINE %s] => THE PIPELINE WAS NOT CREATED. SKIPPING PIPELINE QUEUEING FOR UNKNOWN PIPELINE", appDetails.Pipeline.Name)
 		channelRes.Value = false
 	}
 
-	if areAgentAndPipelineUp {
-		parameters := getPipelineParams(appDetails)
+	if !channelRes.Value {
+		queuesChan <- channelRes
+		return
+	}
 
-		pipelineDetails := NewPipelineCreate(appDetails, infraConfig.DevOpsOrg)
+	parameters := getPipelineParams(appDetails)
+	pipelineDetails := NewPipelineCreate(appDetails, infraConfig.DevOpsOrg)
 
-		pipelineQueueRes, err := azpipelines.QueuePipeline(*pipelineDetails, parameters)
+	pipelineQueueRes, err := azpipelines.QueuePipeline(*pipelineDetails, parameters)
+	if err != nil {
+		color.Red("[ERR:]=> [AZ PIPELINES %s] => FAILED TO RUN PIPELINE => %s", appDetails.Pipeline.Name, err.Error())
+		channelRes.Value = false
+		queuesChan <- channelRes
+		return
+	}
+
+	color.Cyan("[PIPELINE %s] STARTING PIPELINE STATUS POLLING", appDetails.Pipeline.Name)
+
+	var pipelineStatus azpipelines.PipelineStatus
+	for {
+		pipeline, err := azpipelines.GetPipelineStatus(infraConfig.DevOpsOrg, appDetails.Pipeline.Project, pipelineQueueRes.ID)
 		if err != nil {
-			color.Red("[ERR:]=> [AZ PIPELINES %s] => FAILED TO RUN PIPELINE => %s", appDetails.Pipeline.Name, err.Error())
+			color.Red(err.Error())
 			channelRes.Value = false
+			break
 		}
-
-		// start pipeline polling only if there was no error queueing the pipeline
-		var pipelineStatus azpipelines.PipelineStatus
-		if channelRes.Value {
-			color.Cyan("[PIPELINE %s] STARTING PIPELINE STATUS POLLING", appDetails.Pipeline.Name)
-
-			for {
-				pipeline, err := azpipelines.GetPipelineStatus(infraConfig.DevOpsOrg, appDetails.Pipeline.Project, pipelineQueueRes.ID)
-				if err == nil && pipeline.Status == "completed" {
-					pipelineStatus = pipeline
-					break
-				}
-				if err == nil && pipeline.Status != "completed" {
-					color.Yellow("[PIPELINE %s:] [STATUS: %s] WAITING FOR PIPELINE TO FINISH.", appDetails.Pipeline.Name, pipeline.Status)
-				}
-				if err != nil {
-					color.Red(err.Error())
-					channelRes.Value = false
-					break
-				}
-				time.Sleep(30 * time.Second)
-			}
+		if pipeline.Status == "completed" {
+			pipelineStatus = pipeline
+			break
 		}
+		color.Yellow("[PIPELINE %s:] [STATUS: %s] WAITING FOR PIPELINE TO FINISH.", appDetails.Pipeline.Name, pipeline.Status)
+		time.Sleep(30 * time.Second)
+	}
 
-		// if its still true, it means the pipeline completed, check status for proper logging
-		if channelRes.Value {
-			if pipelineStatus.Result == "failed" {
-				color.Red("[ERR:] => [PIPELINE %s] COMPLETED WITY STATUS %s. CHECK THE DEVOPS PORTAL FOR THE ERRORS AND RERUN WITH 'migr8 infra deploy'", appDetails.Pipeline.Name, pipelineStatus.Result)
-			}
-			if pipelineStatus.Result == "succeeded" {
-				color.Green("[PIPELINE %s:] COMPLETED WITH STATUS %s.", appDetails.Pipeline.Name, pipelineStatus.Result)
-			}
+	if channelRes.Value {
+		switch pipelineStatus.Result {
+		case "failed":
+			// Bug fix: typo "WITY" → "WITH"
+			color.Red("[ERR:] => [PIPELINE %s] COMPLETED WITH STATUS %s. CHECK THE DEVOPS PORTAL FOR THE ERRORS AND RERUN WITH 'migr8 infra deploy'", appDetails.Pipeline.Name, pipelineStatus.Result)
+		case "succeeded":
+			color.Green("[PIPELINE %s:] COMPLETED WITH STATUS %s.", appDetails.Pipeline.Name, pipelineStatus.Result)
 		}
 	}
+
 	queuesChan <- channelRes
 }
 
 // infrastructure wrappers
+
 func createFuncApp(funcApp AppDetails) error {
-
 	color.Cyan("[FUNCAPP %s:] CREATING AZURE FUNCTION APP", funcApp.Name)
-	errorMsg := ""
 
-	resGroupDetails := NewResourceGroupCreate(funcApp)
-
-	rgError := azresourcegroup.CreateAzureResourceGroup(*resGroupDetails)
-	if rgError != nil {
-		errorMsg = fmt.Sprintf("[ERR:] [FUNCAPP %s:] => [AZURE RESOURCE GROUP] => %s", funcApp.Name, rgError.Error())
-		return errors.New(errorMsg)
+	if err := azresourcegroup.CreateAzureResourceGroup(*NewResourceGroupCreate(funcApp)); err != nil {
+		return fmt.Errorf("[ERR:] [FUNCAPP %s:] => [AZURE RESOURCE GROUP] => %s", funcApp.Name, err.Error())
 	}
 
-	// make sure that the storage account does not exist. This is important to avoid overwriting function logs etc.
-	storageAccDetails := NewStorageAccountCreate(funcApp)
-
-	saError := azstorageaccount.CreateAzureStorageAccount(*storageAccDetails)
-	if saError != nil {
-		errorMsg = fmt.Sprintf("[ERR:] [FUNCAPP %s:] => [AZURE STORAGE ACCOUNT] => %s", funcApp.Name, saError.Error())
-		return errors.New(errorMsg)
+	if err := azstorageaccount.CreateAzureStorageAccount(*NewStorageAccountCreate(funcApp)); err != nil {
+		return fmt.Errorf("[ERR:] [FUNCAPP %s:] => [AZURE STORAGE ACCOUNT] => %s", funcApp.Name, err.Error())
 	}
 
-	// make sure the functionapp does not exist. This is important to avoid overwriting function during deployment
 	funcAppDetails := NewFunctionCreate(funcApp)
 
-	faError := azfunction.CreateAzureFunction(*funcAppDetails)
-	if faError != nil {
-		errorMsg = fmt.Sprintf("[ERR:] [FUNCAPP %s:] => [AZURE FUNCTIONAPP] => %s", funcApp.Name, faError.Error())
-		return errors.New(errorMsg)
+	if err := azfunction.CreateAzureFunction(*funcAppDetails); err != nil {
+		return fmt.Errorf("[ERR:] [FUNCAPP %s:] => [AZURE FUNCTIONAPP] => %s", funcApp.Name, err.Error())
 	}
 
-	// if the functionapp has not environment variables just print a message
 	if len(funcApp.Settings) == 0 {
 		color.Yellow("[WARN:] [FUNCAPP %s:] AZURE FUNCTIONAPP SETTINGS | NO SETTINGS TO UPDATE. SKIPPING SETTINGS CONFIGURATION", funcApp.Name)
+		return nil
 	}
 
-	// set the environment variables for the functionapp
-	if len(funcApp.Settings) != 0 {
-		faSettingsErr := azfunction.SetAzureFunctionEnv(*funcAppDetails)
-		if faSettingsErr != nil {
-			errorMsg = fmt.Sprintf("[ERR:] [FUNCAPP %s:] => [AZURE FUNCTIONAPP SETTINGS] => %s", funcApp.Name, faSettingsErr.Error())
-			return errors.New(errorMsg)
-		}
+	if err := azfunction.SetAzureFunctionEnv(*funcAppDetails); err != nil {
+		return fmt.Errorf("[ERR:] [FUNCAPP %s:] => [AZURE FUNCTIONAPP SETTINGS] => %s", funcApp.Name, err.Error())
 	}
 
 	return nil
 }
 
 func createWebapp(webapp AppDetails) error {
-
 	color.Cyan("[WEBAPP %s:] CREATING AZURE WEBAPP", webapp.Name)
-	errorMsg := ""
 
-	resGroupDetails := NewResourceGroupCreate(webapp)
-
-	// make sure the resource group for the webapp exists
-	rgError := azresourcegroup.CreateAzureResourceGroup(*resGroupDetails)
-	if rgError != nil {
-		errorMsg = fmt.Sprintf("[ERR:] [WEBAPP %s:] => [AZURE RESOURCE GROUP] => %s", webapp.Name, rgError.Error())
-		return errors.New(errorMsg)
+	if err := azresourcegroup.CreateAzureResourceGroup(*NewResourceGroupCreate(webapp)); err != nil {
+		return fmt.Errorf("[ERR:] [WEBAPP %s:] => [AZURE RESOURCE GROUP] => %s", webapp.Name, err.Error())
 	}
 
-	aspDetails := NewAppServicePlanCreate(webapp)
-
-	// make sure the app service plan exists
-	aseError := azappservice.CreateAzureAppServicePlan(*aspDetails)
-	if aseError != nil {
-		errorMsg = fmt.Sprintf("[ERR:] [WEBAPP %s:] => [AZURE APP SERVICE PLAN] => %s", webapp.Name, aseError.Error())
-		return errors.New(errorMsg)
+	if err := azappservice.CreateAzureAppServicePlan(*NewAppServicePlanCreate(webapp)); err != nil {
+		return fmt.Errorf("[ERR:] [WEBAPP %s:] => [AZURE APP SERVICE PLAN] => %s", webapp.Name, err.Error())
 	}
 
-	webappDetails := NewWebAppCreate(webapp)
-
-	// create the webapp
-	waError := azwebapp.CreateAzureWebApp(*webappDetails)
-	if waError != nil {
-		errorMsg = fmt.Sprintf("[ERR:] [WEBAPP %s:] => [AZURE WEBAPP] => %s", webapp.Name, waError.Error())
-		return errors.New(errorMsg)
+	if err := azwebapp.CreateAzureWebApp(*NewWebAppCreate(webapp)); err != nil {
+		return fmt.Errorf("[ERR:] [WEBAPP %s:] => [AZURE WEBAPP] => %s", webapp.Name, err.Error())
 	}
 
 	return nil
 }
 
 // utility functions
-func isResourceCreated(channelResults []ChannelRes, key string) bool {
-	if len(channelResults) == 0 {
-		return false
-	}
 
-	isCreated := true
+// isResourceCreated reports whether the given key was recorded as successfully
+// created. Returns false both when the key was recorded as failed AND when the
+// key is not found in the results at all (safe default).
+func isResourceCreated(channelResults []ChannelRes, key string) bool {
 	for _, res := range channelResults {
 		if res.Key == key {
-			isCreated = res.Value
-			break
+			return res.Value
 		}
 	}
-	return isCreated
+	// Bug fix: previously returned true by default when the key was not found.
+	return false
 }
 
 func printResults(isCompleteRun bool, isCreateRun bool, isDeployRun bool) {
@@ -571,47 +528,45 @@ func printResults(isCompleteRun bool, isCreateRun bool, isDeployRun bool) {
 
 		if len(agentsRes) > 0 {
 			agentCreated := isResourceCreated(agentsRes, appName)
-			if (isCompleteRun && agentCreated) || (isDeployRun && agentCreated) {
+			if (isCompleteRun || isDeployRun) && agentCreated {
 				agent = "SUCCESS"
 			}
-			if (isCompleteRun && !agentCreated) || (isDeployRun && !agentCreated) {
+			if (isCompleteRun || isDeployRun) && !agentCreated {
 				agent = "FAILED"
 			}
 		}
 
 		if len(infraRes) > 0 {
 			infrastructureCreated := isResourceCreated(infraRes, appName)
-			if (isCompleteRun && infrastructureCreated) || (isCreateRun && infrastructureCreated) {
+			if (isCompleteRun || isCreateRun) && infrastructureCreated {
 				infra = "SUCCESS"
 			}
-			if (isCompleteRun && !infrastructureCreated) || (isCreateRun && !infrastructureCreated) {
+			if (isCompleteRun || isCreateRun) && !infrastructureCreated {
 				infra = "FAILED"
 			}
 		}
 
 		if len(pipelinesRes) > 0 {
 			pipelineCreated := isResourceCreated(pipelinesRes, appName)
-			if (isCompleteRun && pipelineCreated) || (isDeployRun && pipelineCreated) {
+			if (isCompleteRun || isDeployRun) && pipelineCreated {
 				pipeline = "SUCCESS"
 			}
-			if (isCompleteRun && !pipelineCreated) || (isDeployRun && !pipelineCreated) {
+			if (isCompleteRun || isDeployRun) && !pipelineCreated {
 				pipeline = "FAILED"
 			}
 		}
 
 		if len(queuesRes) > 0 {
 			queueCreated := isResourceCreated(queuesRes, appName)
-			if (isCompleteRun && queueCreated) || (isDeployRun && queueCreated) {
+			if (isCompleteRun || isDeployRun) && queueCreated {
 				queue = "SUCCESS"
 			}
-			if (isCompleteRun && !queueCreated) || (isDeployRun && !queueCreated) {
+			if (isCompleteRun || isDeployRun) && !queueCreated {
 				queue = "FAILED"
 			}
 		}
 
-		t.AppendRow(prettyTable.Row{
-			appName, agent, infra, pipeline, queue,
-		})
+		t.AppendRow(prettyTable.Row{appName, agent, infra, pipeline, queue})
 		t.AppendSeparator()
 	}
 
@@ -632,14 +587,14 @@ func getPipelineParams(appDetails AppDetails) []string {
 
 	if appDetails.Type == "webapp" {
 		for _, env := range appDetails.Settings {
-			specialChars, _ := regexp.Compile(`[!@#\$%\^&\*\(\)_\+\=\[\]\{\};'"\\|,<>?~]`)
-			param := env.Name + "=" + env.Value
-			if specialChars.MatchString(env.Value) {
-				param = fmt.Sprintf("%s=\"%s\"", env.Name, env.Value)
-			}
-			parameters = append(parameters, param)
+			// Bug fix: removed conditional shell-quoting. exec.Command passes args
+			// directly to the OS without a shell — adding literal '"' chars around
+			// values via fmt.Sprintf corrupted the setting values. Pass name=value
+			// verbatim; special characters (/, \, =, etc.) are handled correctly.
+			parameters = append(parameters, env.Name+"="+env.Value)
 		}
 	}
 
 	return parameters
 }
+

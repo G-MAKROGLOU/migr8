@@ -118,7 +118,7 @@ func fetchLatestRelease() (*githubRelease, error) {
 	if err != nil {
 		return nil, fmt.Errorf("HTTP request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, fmt.Errorf("no releases found for this repository")
@@ -163,7 +163,7 @@ func downloadAndReplace(url, dest string) error {
 	if err != nil {
 		return fmt.Errorf("download failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("download returned HTTP %d", resp.StatusCode)
@@ -179,13 +179,15 @@ func downloadAndReplace(url, dest string) error {
 
 	// Always clean up the temp file if something goes wrong; this is a no-op
 	// if the rename succeeded because the path no longer exists.
-	defer os.Remove(tmpPath)
+	defer func() { _ = os.Remove(tmpPath) }()
 
 	if _, err := io.Copy(tmp, resp.Body); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return fmt.Errorf("error writing download to disk: %w", err)
 	}
-	tmp.Close()
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("cannot close temp file: %w", err)
+	}
 
 	// Mirror the permissions of the current executable (typically 0755).
 	if info, statErr := os.Stat(dest); statErr == nil {

@@ -1,8 +1,9 @@
 version: "2"
 
 linters:
-  # Start from the default set and add a few extras.
+  # Start from the default set (standard) and add a few extras.
   # Defaults: errcheck, gosimple, govet, ineffassign, staticcheck, unused
+  default: standard
   enable:
     - misspell      # catches typos in comments and strings
     - unconvert     # removes unnecessary type conversions
@@ -12,12 +13,11 @@ linters:
   settings:
     misspell:
       locale: US
-
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
+  exclusions:
+    rules:
+      - path: '(.+)_test\.go'
+        linters:
+          - errcheck
 
 run:
   timeout: 5m

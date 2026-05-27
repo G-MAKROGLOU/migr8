@@ -20,5 +20,5 @@ issues:
         - errcheck
 
 run:
-  go: "1.21"
+  go: "1.25"
   timeout: 5m

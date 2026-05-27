@@ -1,6 +1,6 @@
 module github.com/G-MAKROGLOU/migr8
 
-go 1.21
+go 1.25
 
 require (
 	github.com/G-MAKROGLOU/containers v0.0.0-20240713115820-784413a54d12

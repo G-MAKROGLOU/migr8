@@ -1,19 +1,19 @@
+version: "2"
+
 linters:
   # Start from the default set and add a few extras.
-  # Default enabled: errcheck, gosimple, govet, ineffassign, staticcheck, unused
+  # Defaults: errcheck, gosimple, govet, ineffassign, staticcheck, unused
   enable:
     - misspell      # catches typos in comments and strings
     - unconvert     # removes unnecessary type conversions
     - whitespace    # detects leading/trailing blank lines in blocks
     - nilerr        # finds code that returns nil when err is not nil
     - bodyclose     # ensures HTTP response bodies are closed
-
-linters-settings:
-  misspell:
-    locale: US
+  settings:
+    misspell:
+      locale: US
 
 issues:
-  # Don't fail on generated files or test helpers.
   exclude-rules:
     - path: _test\.go
       linters:

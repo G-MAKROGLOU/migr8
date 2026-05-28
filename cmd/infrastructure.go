@@ -612,7 +612,7 @@ func destroyRun(cmd *cobra.Command, args []string) {
 		reader := bufio.NewReader(os.Stdin)
 		input, _ := reader.ReadString('\n')
 		if strings.ToLower(strings.TrimSpace(input)) != "yes" {
-			color.Yellow("DESTROY CANCELLED.")
+			color.Yellow("DESTROY CANCELED.")
 			return
 		}
 	}

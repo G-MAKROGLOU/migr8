@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"os/signal"
@@ -29,6 +30,9 @@ var (
 	infraRes     = []ChannelRes{}
 	pipelinesRes = []ChannelRes{}
 	queuesRes    = []ChannelRes{}
+	destroyYes   bool
+	destroyPurge bool
+	testMode     bool
 	infraCmd     = &cobra.Command{
 		Use:               "infra",
 		Short:             "Create all the infrastructure needed by an application stack",
@@ -58,6 +62,18 @@ var (
 		Run:     run,
 		Version: rootCmd.Version,
 	}
+	destroyCmd = &cobra.Command{
+		Use:   "destroy",
+		Short: "Destroy all infrastructure defined in the configuration",
+		Long:  "Destroy all infrastructure defined in the configuration",
+		Run:   destroyRun,
+		// Override the parent's PersistentPostRun — a destroy run creates no Docker
+		// containers or build context, so the standard results table is not printed.
+		PersistentPostRun: func(cmd *cobra.Command, args []string) {
+			_ = os.RemoveAll("migr8_agentpool_build_ctx")
+		},
+		Version: rootCmd.Version,
+	}
 )
 
 func init() {
@@ -66,9 +82,14 @@ func init() {
 		panic(fmt.Sprintf("failed to mark infraConfig flag as required: %s", err))
 	}
 
+	destroyCmd.Flags().BoolVarP(&destroyYes, "yes", "y", false, "Skip the confirmation prompt")
+	destroyCmd.Flags().BoolVar(&destroyPurge, "purge", false, "Also delete resource groups (cascade-deletes all contained resources, fastest teardown)")
+	fullCmd.Flags().BoolVar(&testMode, "test", false, "Destroy all infrastructure after the run completes (useful for cost-free CI testing)")
+
 	infraCmd.AddCommand(onlyInfraCmd)
 	infraCmd.AddCommand(onlyDeployCmd)
 	infraCmd.AddCommand(fullCmd)
+	infraCmd.AddCommand(destroyCmd)
 
 	rootCmd.AddCommand(infraCmd)
 }
@@ -131,6 +152,13 @@ func run(cmd *cobra.Command, args []string) {
 		for queue := range queuesChan {
 			queuesRes = append(queuesRes, queue)
 		}
+	}
+
+	// --test: automatically tear down all infrastructure after a complete run so
+	// nothing is left running (and billing) during CI / exploratory testing.
+	if isCompleteRun && testMode {
+		color.Yellow("[TEST MODE] TEARING DOWN ALL INFRASTRUCTURE (PURGE)...")
+		destroy(true)
 	}
 }
 
@@ -573,6 +601,140 @@ func printResults(isCompleteRun bool, isCreateRun bool, isDeployRun bool) {
 	}
 
 	t.Render()
+}
+
+// destroyRun is the cobra Run handler for `migr8 infra destroy`.
+func destroyRun(cmd *cobra.Command, args []string) {
+	if !destroyYes {
+		printDestroyPlan()
+		color.Yellow("\nThis will permanently delete the resources listed above.")
+		fmt.Print("Type 'yes' to confirm: ")
+		reader := bufio.NewReader(os.Stdin)
+		input, _ := reader.ReadString('\n')
+		if strings.ToLower(strings.TrimSpace(input)) != "yes" {
+			color.Yellow("DESTROY CANCELLED.")
+			return
+		}
+	}
+	destroy(destroyPurge)
+}
+
+// printDestroyPlan renders a table of every resource that will be deleted.
+func printDestroyPlan() {
+	t := prettyTable.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	color.Cyan("\n############### MIGR8 DESTROY PLAN ##############\n")
+	t.AppendHeader(prettyTable.Row{"APP", "TYPE", "PIPELINE", "RESOURCE GROUP", "STORAGE ACCOUNT", "APP SERVICE PLAN"})
+	for _, app := range infraConfig.Infrastructure {
+		asp := "N/A"
+		if app.Type == "webapp" {
+			asp = app.AppServicePlan
+		}
+		sa := "N/A"
+		if app.Type == "function" {
+			sa = app.StorageAccount
+		}
+		t.AppendRow(prettyTable.Row{app.Name, app.Type, app.Pipeline.Name, app.ResourceGroup, sa, asp})
+		t.AppendSeparator()
+	}
+	t.Render()
+}
+
+// destroy tears down the infrastructure defined in infraConfig.
+// Phase order respects Azure dependency constraints:
+//
+//  1. Pipelines (Azure DevOps — independent of resource groups)
+//  2. (purge=true)  Resource groups — cascade-deletes every resource inside them.
+//     (purge=false) Apps (function apps / web apps) in parallel.
+//  3. (purge=false) App service plans + storage accounts in parallel.
+func destroy(purge bool) {
+	// Phase 1: delete Azure DevOps pipelines (no Azure resource-group dependency).
+	color.Cyan("[DESTROY] PHASE 1: DELETING PIPELINES")
+	var wg1 sync.WaitGroup
+	for _, app := range infraConfig.Infrastructure {
+		if app.Pipeline.Name == "" {
+			continue
+		}
+		wg1.Add(1)
+		go func(a AppDetails) {
+			defer wg1.Done()
+			if err := azpipelines.DeletePipeline(infraConfig.DevOpsOrg, a.Pipeline.Project, a.Pipeline.Name); err != nil {
+				color.Red("[DESTROY] [ERR:] PIPELINE %s: %s", a.Pipeline.Name, err.Error())
+			}
+		}(app)
+	}
+	wg1.Wait()
+
+	if purge {
+		// Purge mode: delete resource groups; Azure cascades through apps, plans, storage.
+		color.Cyan("[DESTROY] PHASE 2 (PURGE): DELETING RESOURCE GROUPS")
+		var wg2 sync.WaitGroup
+		seen := map[string]bool{}
+		for _, app := range infraConfig.Infrastructure {
+			if app.ResourceGroup == "" || seen[app.ResourceGroup] {
+				continue
+			}
+			seen[app.ResourceGroup] = true
+			wg2.Add(1)
+			go func(rg string) {
+				defer wg2.Done()
+				if err := azresourcegroup.DeleteAzureResourceGroup(rg); err != nil {
+					color.Red("[DESTROY] [ERR:] RESOURCE GROUP %s: %s", rg, err.Error())
+				}
+			}(app.ResourceGroup)
+		}
+		wg2.Wait()
+		color.Green("[DESTROY] COMPLETE (PURGE).")
+		return
+	}
+
+	// Phase 2: delete apps (function apps and web apps, concurrent).
+	color.Cyan("[DESTROY] PHASE 2: DELETING APPS")
+	var wg2 sync.WaitGroup
+	for _, app := range infraConfig.Infrastructure {
+		wg2.Add(1)
+		go func(a AppDetails) {
+			defer wg2.Done()
+			var err error
+			switch a.Type {
+			case "function":
+				err = azfunction.DeleteAzureFunction(a.Name, a.ResourceGroup)
+			case "webapp":
+				err = azwebapp.DeleteAzureWebApp(a.Name, a.ResourceGroup)
+			}
+			if err != nil {
+				color.Red("[DESTROY] [ERR:] APP %s: %s", a.Name, err.Error())
+			}
+		}(app)
+	}
+	wg2.Wait()
+
+	// Phase 3: delete app service plans and storage accounts (after apps are gone).
+	color.Cyan("[DESTROY] PHASE 3: DELETING PLANS AND STORAGE ACCOUNTS")
+	var wg3 sync.WaitGroup
+	for _, app := range infraConfig.Infrastructure {
+		wg3.Add(1)
+		go func(a AppDetails) {
+			defer wg3.Done()
+			switch a.Type {
+			case "function":
+				if a.StorageAccount != "" {
+					if err := azstorageaccount.DeleteAzureStorageAccount(a.StorageAccount, a.ResourceGroup); err != nil {
+						color.Red("[DESTROY] [ERR:] STORAGE ACCOUNT %s: %s", a.StorageAccount, err.Error())
+					}
+				}
+			case "webapp":
+				if a.AppServicePlan != "" {
+					if err := azappservice.DeleteAzureAppServicePlan(a.AppServicePlan, a.ResourceGroup); err != nil {
+						color.Red("[DESTROY] [ERR:] APP SERVICE PLAN %s: %s", a.AppServicePlan, err.Error())
+					}
+				}
+			}
+		}(app)
+	}
+	wg3.Wait()
+
+	color.Green("[DESTROY] COMPLETE.")
 }
 
 func getPipelineParams(appDetails AppDetails) []string {

@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/G-MAKROGLOU/containers v0.0.0-20240713115820-784413a54d12
 	github.com/G-MAKROGLOU/devops v0.0.1
-	github.com/G-MAKROGLOU/infrastructure v0.0.0-20240713215514-c87060ef9528
+	github.com/G-MAKROGLOU/infrastructure v0.0.1
 	github.com/fatih/color v1.19.0
 	github.com/jedib0t/go-pretty/v6 v6.7.10
 	github.com/spf13/cobra v1.10.2

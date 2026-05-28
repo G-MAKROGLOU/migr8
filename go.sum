@@ -6,8 +6,8 @@ github.com/G-MAKROGLOU/containers v0.0.0-20240713115820-784413a54d12 h1:riO6ZD5z
 github.com/G-MAKROGLOU/containers v0.0.0-20240713115820-784413a54d12/go.mod h1:XeGFZistEMD/jKyInwApWVTpcToY3U5hXBYWBsN/BBs=
 github.com/G-MAKROGLOU/devops v0.0.1 h1:8prV5PMFfVBwqqtT1cB4YwoQwzoLFk/TUSwB/4z5mnI=
 github.com/G-MAKROGLOU/devops v0.0.1/go.mod h1:4HgaesCBEsIsY+hXtghgpQwLM6C4uKjH/tpdpoZh4jw=
-github.com/G-MAKROGLOU/infrastructure v0.0.0-20240713215514-c87060ef9528 h1:hRmTxSqRpYpJPT195LRTNI3c1077aLt6aGk8pBu0xQs=
-github.com/G-MAKROGLOU/infrastructure v0.0.0-20240713215514-c87060ef9528/go.mod h1:z6W2Z3zRzWufzrYX5qgGCp1rhs02q8QZHSH1azHV8w4=
+github.com/G-MAKROGLOU/infrastructure v0.0.1 h1:r0ou2dwS6wRdj6dN5Dpxm1G0vyuGSU/r8M9busbPqTw=
+github.com/G-MAKROGLOU/infrastructure v0.0.1/go.mod h1:cBUUAOBQlhnLh25p3S+ihMNsxQHjejg40h9AJ+yybu4=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/cenkalti/backoff/v4 v4.3.0 h1:MyRJ/UdXutAwSAT+s3wNd7MfTIcy71VQueUuFK343L8=

@@ -7,7 +7,7 @@ require (
 	github.com/G-MAKROGLOU/devops v0.0.1
 	github.com/G-MAKROGLOU/infrastructure v0.0.1
 	github.com/fatih/color v1.19.0
-	github.com/jedib0t/go-pretty/v6 v6.8.2
+	github.com/jedib0t/go-pretty/v6 v6.8.3
 	github.com/spf13/cobra v1.10.2
 )
 
